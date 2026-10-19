@@ -1,64 +1,39 @@
 # Computer Vision Robot
 
-Real-time traffic-sign recognition for a robot using a camera, OpenCV, and
-Ultralytics YOLO.
+## Project description
 
-> **Submission status:** Complete the fields marked `_To be completed_`
-> before submitting the repository. The final dataset, group information,
-> robot hardware details, report, and demonstration links must match the
-> system shown during the final presentation.
+This project is a real-time computer-vision system for recognizing traffic
+signs and converting recognized signs into robot movement commands. The system
+uses a camera, OpenCV, and an Ultralytics YOLO model.
 
-## Table of contents
+The program supports a USB webcam, built-in camera, or phone-camera stream.
+The live inference program is located at
+[`src/testing/testing.py`](src/testing/testing.py).
 
-- [Project overview](#project-overview)
-- [Team and specialization](#team-and-specialization)
-- [System workflow](#system-workflow)
-- [Repository structure](#repository-structure)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Run the live system](#run-the-live-system)
-- [Models](#models)
-- [Dataset](#dataset)
-- [Training and experiments](#training-and-experiments)
-- [Results and demonstration evidence](#results-and-demonstration-evidence)
-- [Submission checklist](#submission-checklist)
+## System workflow
 
-## Project overview
+The system follows the **SEE -> DECIDE -> ACT** process:
 
-The system reads frames from a USB webcam, built-in camera, or phone-camera
-stream. A trained YOLO model recognizes traffic signs and the program
-translates a stable recognition into a robot command.
+1. **SEE** - Capture a frame from the camera and prepare its orientation and
+   size.
+2. **DECIDE** - Run YOLO detection or classification, filter low-confidence
+   predictions, and smooth results across multiple frames.
+3. **ACT** - Select the largest recognized command sign and output its robot
+   command.
 
-The intended computer-vision pipeline is:
+The command mapping used by the program includes:
 
-```text
-Camera frame
-    ↓
-Frame preparation: rotation and resizing
-    ↓
-YOLO detection or classification
-    ↓
-Confidence filtering and temporal smoothing
-    ↓
-Largest command sign selected
-    ↓
-Robot command printed/emitted
-```
-
-The implementation demonstrates the **SEE -> DECIDE -> ACT** process:
-
-| Stage | Implementation |
+| Recognized sign | Command |
 |---|---|
-| SEE | Capture and prepare a camera frame |
-| DECIDE | Run YOLO inference, filter detections, and smooth results across frames |
-| ACT | Translate the recognized sign to a command such as `S`, `L`, `R`, `F`, or `N` |
+| `stop` | `S` |
+| `no_left_turn` / `turn_left` | `L` |
+| `no_right_turn` / `turn_right` | `R` |
+| `go_ahead` | `F` |
+| `no_entry` | `N` |
 
-## Team and specialization
-
-- **Group members:** _To be completed_
-- **Assigned group specialization:** _To be completed_
-- **Robot/controller hardware:** _To be completed_
-- **Final report:** _Add the PDF to the repository or provide an approved link_
+The program waits for a sign to remain consistent over several frames before
+emitting a command. This reduces unintended commands from unstable
+predictions.
 
 ## Repository structure
 
@@ -77,7 +52,6 @@ CV_robot/
 │   └── README.md
 └── src/
     ├── robot/
-    │   └── README.md
     ├── testing/
     │   ├── README.md
     │   └── testing.py
@@ -85,26 +59,34 @@ CV_robot/
     │   ├── README.md
     │   └── *.ipynb
     └── vision/
-        └── README.md
 ```
 
-The live entry point is located at
-[`src/testing/testing.py`](src/testing/testing.py).
+## Hardware
 
-## Requirements
+The system requires:
 
-- Windows, macOS, or Linux
+- A USB webcam, built-in camera, or phone camera stream
+- A computer capable of running Python and YOLO inference
+- A robot or controller when physical command execution is required
+
+The computer-vision program can be tested without connecting the robot. In
+that mode, recognized commands are printed in the terminal.
+
+## Software
+
 - Python 3.10 or newer
-- A webcam, built-in camera, or compatible phone-camera stream
-- Optional robot/controller hardware for physical movement
-- Python packages listed in [`requirements.txt`](requirements.txt)
+- Ultralytics YOLO
+- OpenCV
+- NumPy
+- Matplotlib
+- PySerial
 
-The trained model files are already stored in `models/`. The dataset folder
-contains documentation for the final dataset location and access details.
+The package versions are listed in
+[`requirements.txt`](requirements.txt).
 
 ## Installation
 
-Open PowerShell in the repository root:
+Open PowerShell in the project root and create a virtual environment:
 
 ```powershell
 python -m venv .venv
@@ -113,37 +95,34 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-If the `python` command is not available, install Python and enable
-**Add Python to PATH**, then open a new terminal.
+## Running the system
 
-## Run the live system
-
-Run this command from the repository root:
+Run the default model with the default camera:
 
 ```powershell
 python src\testing\testing.py
 ```
 
-The command previously written as `python robot/testing/testing.py` is not
-correct for this repository because there is no `robot/testing/` directory.
-The correct path is `src/testing/testing.py`.
+The command must be run from the project root. The correct path is
+`src\testing\testing.py`; there is no `robot\testing\testing.py` path in this
+repository.
 
-### Select a webcam
+### Camera selection
+
+Use a specific webcam index:
 
 ```powershell
 python src\testing\testing.py 0
 python src\testing\testing.py 1
 ```
 
-List available webcam indexes:
+List available camera indexes:
 
 ```powershell
 python src\testing\testing.py --list
 ```
 
-### Use a phone-camera stream
-
-Replace the example address with the URL provided by the phone-camera app:
+Use a phone-camera stream:
 
 ```powershell
 python src\testing\testing.py "http://192.168.1.23:8080/video"
@@ -151,55 +130,59 @@ python src\testing\testing.py "http://192.168.1.23:8080/video"
 
 The phone and computer must be connected to the same network.
 
-### Select model weights or rotate the camera
+### Model and camera orientation
+
+The default model is `models\best.pt`. A different model can be selected with
+`--weights`:
 
 ```powershell
-python src\testing\testing.py --weights models\best.pt
-python src\testing\testing.py --weights models\4th_best.pt --rotate 90
+python src\testing\testing.py --weights models\4th_best.pt
+```
+
+For a vertically oriented phone camera, set the rotation:
+
+```powershell
+python src\testing\testing.py --rotate 90
 ```
 
 Supported rotation values are `0`, `90`, `180`, and `270`.
 
-### Keyboard controls
+### Preview controls
 
-When the preview window is active:
+The live preview supports the following keyboard controls:
 
-- `q` - quit
-- `f` - toggle fullscreen
-- `m` - switch between multi-sign scan and centre classification
-- `r` - rotate the frame
+- `q` - Quit the program
+- `f` - Toggle fullscreen
+- `m` - Switch between multi-sign scan and centre classification
+- `r` - Rotate the camera image
 
-The program waits for the same command sign to appear across several frames
-before printing a command. This helps reduce accidental actions caused by a
-single uncertain prediction.
+## Trained models
 
-## Models
+The trained YOLO weights are stored in [`models/`](models/):
 
-The default model is [`models/best.pt`](models/best.pt). Additional experiment
-checkpoints are stored in the same folder:
-
+- [`best.pt`](models/best.pt)
 - `first_best.pt`
 - `second_best.pt`
 - `3rd_best.pt`
 - `4th_best.pt`
 - `segunda_etapa_best.pt`
 
-See [`models/README.md`](models/README.md) for model-use notes. The runner
-prints the model task and class names when it starts. Record the exact
-checkpoint used for the final demonstration in the project report.
+The live program uses `best.pt` by default. It prints the loaded model task
+and recognized class names when it starts. Additional model information is
+available in [`models/README.md`](models/README.md).
 
 ## Dataset
 
-The final dataset is intentionally not bundled in this repository until the
-correct dataset is confirmed. See [`dataset/README.md`](dataset/README.md) for
-the required source, access link, split counts, classes, and annotation format.
+The [`dataset/`](dataset/) folder contains the documentation and access
+information for the dataset used by the project. The dataset is kept separate
+from the source code and model weights.
 
-Before running the training notebooks, add the approved dataset and update
-the notebook dataset path if necessary.
+The dataset documentation records the source, annotation format, class list,
+and training, validation, and testing splits.
 
 ## Training and experiments
 
-Training and experiment notebooks are stored in
+The project notebooks are stored in
 [`src/training/`](src/training/):
 
 - `test_2_robot.ipynb`
@@ -207,40 +190,31 @@ Training and experiment notebooks are stored in
 - `test_4.ipynb`
 - `test_4_improvement.ipynb`
 
-These notebooks document the project experiments and model-development
-iterations. The reproducible live demonstration command is the standalone
-`src/testing/testing.py` script.
+These notebooks contain the model-training experiments, evaluation work, and
+robot-testing iterations used during development.
 
-## Results and demonstration evidence
+## Results and demonstration
 
-Store final metrics, annotated predictions, confusion matrices, and testing
-logs in [`results/`](results/).
+The [`results/`](results/) folder is used for prediction outputs, evaluation
+metrics, testing logs, and other computer-vision results.
 
-Store robot photographs, computer-vision screenshots, and demonstration-video
-links or files in [`demonstration/`](demonstration/).
+The [`demonstration/`](demonstration/) folder is used for robot photographs,
+system screenshots, demonstration videos, and evidence of the complete
+SEE -> DECIDE -> ACT process.
 
-The final evidence must show:
+## Project information
 
-1. Test 1: Figure-8 line detection and tracking
-2. Test 2: Group project specialization
-3. The complete SEE -> DECIDE -> ACT process
-4. Final testing results and representative predictions
+- **Group members:**
+  - Albano, Luis Van Dirk
+  - Borac, John Joshua
+  - Carullo, John Wilbert
+  - Regalado, Roger Jr.
+  - Reyes, Reynaldo Jr.
+  - Sabio, Jacob Angel
 
-## Submission checklist
+- **Project specialization:**
 
-- [ ] Add group member names and assigned specialization.
-- [ ] Add the final project report PDF or approved access link.
-- [ ] Confirm the final dataset source, classes, and train/validation/test counts.
-- [ ] Confirm the model checkpoint used in the final demonstration.
-- [ ] Add final metrics and sample predictions to `results/`.
-- [ ] Add robot photographs to `demonstration/`.
-- [ ] Add Test 1 Figure-8 video link or file.
-- [ ] Add Test 2 specialization video link or file.
-- [ ] Add SEE -> DECIDE -> ACT evidence.
-- [ ] Test the documented installation and run commands from a clean terminal.
+Traffic Sign Recognition
 
-## License and access
-
-Add the project license and any dataset/model license information here before
-publishing the repository. If files are kept private, provide the instructor
-with repository or external-storage access.
+- **Robot/controller:** The computer-vision application outputs movement
+  commands for the connected robot/controller.
