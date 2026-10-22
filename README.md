@@ -1,92 +1,67 @@
 # Computer Vision Robot
 
-## Project description
+Real-time traffic-sign recognition for a robot/controller. The system captures
+camera frames, recognizes traffic signs with an Ultralytics YOLO model, and
+prints a movement command after a stable prediction. It can be demonstrated
+with a webcam or a phone stream even when the robot is not connected.
 
-This project is a real-time computer-vision system for recognizing traffic
-signs and converting recognized signs into robot movement commands. The system
-uses a camera, OpenCV, and an Ultralytics YOLO model.
+## Project information
 
-The program supports a USB webcam, built-in camera, or phone-camera stream.
-The live inference program is located at
-[`src/testing/testing.py`](src/testing/testing.py).
+| Item | Details |
+|---|---|
+| Project specialization | Traffic Sign Recognition |
+| Team | Albano, Luis Van Dirk; Borac, John Joshua; Carullo, John Wilbert; Regalado, Roger Jr.; Reyes, Reynaldo Jr.; Sabio, Jacob Angel |
+| Final inference entry point | [`src/testing/testing.py`](src/testing/testing.py) |
+| Default weights | [`models/best.pt`](models/best.pt) |
 
-## System workflow
+## System overview
 
-The system follows the **SEE -> DECIDE -> ACT** process:
+The implementation follows **SEE -> DECIDE -> ACT**:
 
-1. **SEE** - Capture a frame from the camera and prepare its orientation and
-   size.
-2. **DECIDE** - Run YOLO detection or classification, filter low-confidence
-   predictions, and smooth results across multiple frames.
-3. **ACT** - Select the largest recognized command sign and output its robot
-   command.
+1. **SEE:** Open a webcam or phone stream, rotate the frame when necessary,
+   resize very large frames, and display the live image.
+2. **DECIDE:** Run YOLO detection or classification, discard predictions below
+   the `0.80` confidence threshold, suppress overlapping scan windows, and
+   choose the largest command sign in view.
+3. **ACT:** Require the same sign for four consecutive frames, then print its
+   controller command. A connected robot can use the same command interface.
 
-The command mapping used by the program includes:
-
-| Recognized sign | Command |
+| Sign name | Command |
 |---|---|
 | `stop` | `S` |
-| `no_left_turn` / `turn_left` | `L` |
-| `no_right_turn` / `turn_right` | `R` |
+| `no_left_turn` or `turn_left` | `L` |
+| `no_right_turn` or `turn_right` | `R` |
 | `go_ahead` | `F` |
 | `no_entry` | `N` |
 
-The program waits for a sign to remain consistent over several frames before
-emitting a command. This reduces unintended commands from unstable
-predictions.
+## Hardware and software
 
-## Repository structure
+**Hardware:** Windows/Linux computer, USB or built-in webcam (or a phone
+camera stream), and the robot/controller for physical actuation.
+
+**Software:** Python 3.10+, OpenCV, NumPy, Ultralytics, Matplotlib, and
+PySerial. Exact dependency constraints are in
+[`requirements.txt`](requirements.txt).
+
+## Repository contents
 
 ```text
 CV_robot/
-├── README.md
-├── requirements.txt
-├── dataset/
-│   └── README.md
-├── demonstration/
-│   └── README.md
-├── models/
-│   ├── README.md
-│   └── *.pt
-├── results/
-│   └── README.md
-└── src/
-    ├── robot/
-    ├── testing/
-    │   ├── README.md
-    │   └── testing.py
-    ├── training/
-    │   ├── README.md
-    │   └── *.ipynb
-    └── vision/
+├── dataset/          Dataset source, split, class, and access record
+├── demonstration/    Photos, screenshots, videos, and evidence index
+├── models/           Submitted YOLO weights and model notes
+├── results/          Metrics, predictions, and final test evidence
+├── src/
+│   ├── robot/        Hardware command integration notes
+│   ├── testing/      Live camera inference
+│   ├── training/     Training/evaluation notebooks
+│   └── vision/       Vision pipeline notes
+└── requirements.txt
 ```
-
-## Hardware
-
-The system requires:
-
-- A USB webcam, built-in camera, or phone camera stream
-- A computer capable of running Python and YOLO inference
-- A robot or controller when physical command execution is required
-
-The computer-vision program can be tested without connecting the robot. In
-that mode, recognized commands are printed in the terminal.
-
-## Software
-
-- Python 3.10 or newer
-- Ultralytics YOLO
-- OpenCV
-- NumPy
-- Matplotlib
-- PySerial
-
-The package versions are listed in
-[`requirements.txt`](requirements.txt).
 
 ## Installation
 
-Open PowerShell in the project root and create a virtual environment:
+From the repository root:
 
 ```powershell
 python -m venv .venv
@@ -95,7 +70,7 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-## Running the system
+## Running the final system
 
 Run the default model with the default camera:
 
@@ -103,118 +78,47 @@ Run the default model with the default camera:
 python src\testing\testing.py
 ```
 
-The command must be run from the project root. The correct path is
-`src\testing\testing.py`; there is no `robot\testing\testing.py` path in this
-repository.
-
-### Camera selection
-
-Use a specific webcam index:
+Useful alternatives:
 
 ```powershell
-python src\testing\testing.py 0
 python src\testing\testing.py 1
-```
-
-List available camera indexes:
-
-```powershell
 python src\testing\testing.py --list
-```
-
-Use a phone-camera stream:
-
-```powershell
+python src\testing\testing.py --weights models\4th_best.pt
+python src\testing\testing.py --rotate 90
 python src\testing\testing.py "http://192.168.1.23:8080/video"
 ```
 
-The phone and computer must be connected to the same network.
+The phone and computer must be on the same network for an IP-camera URL.
+Press `q` to quit, `f` to toggle fullscreen, `m` to switch scan/centre mode,
+and `r` to rotate the preview.
 
-### Model and camera orientation
+## Dataset and training
 
-The default model is `models\best.pt`. A different model can be selected with
-`--weights`:
+The training notebooks in [`src/training/`](src/training/) document the
+experiments, preprocessing, training, and evaluation workflow. The dataset
+access record, class list, annotation format, and split counts must be kept in
+[`dataset/README.md`](dataset/README.md). The dataset archive itself is not
+included in this checkout; add an approved link or private instructor access
+before final submission.
 
-```powershell
-python src\testing\testing.py --weights models\4th_best.pt
-```
+## Model and results
 
-For a vertically oriented phone camera, set the rotation:
+Model usage and checkpoint roles are documented in
+[`models/README.md`](models/README.md). Final precision, recall, mAP,
+confusion matrix, sample predictions, and Test 1/Test 2 evidence belong in
+[`results/README.md`](results/README.md) and [`results/`](results/).
 
-```powershell
-python src\testing\testing.py --rotate 90
-```
+The required robot photos, screenshots, videos, and SEE -> DECIDE -> ACT
+evidence are indexed in [`demonstration/README.md`](demonstration/README.md).
+No unsupported metrics or demonstration links are claimed by this README;
+they should be added when the final test artifacts are available.
 
-Supported rotation values are `0`, `90`, `180`, and `270`.
+## Reproducibility checklist
 
-### Preview controls
-
-The live preview supports the following keyboard controls:
-
-- `q` - Quit the program
-- `f` - Toggle fullscreen
-- `m` - Switch between multi-sign scan and centre classification
-- `r` - Rotate the camera image
-
-## Trained models
-
-The trained YOLO weights are stored in [`models/`](models/):
-
-- [`best.pt`](models/best.pt)
-- `first_best.pt`
-- `second_best.pt`
-- `3rd_best.pt`
-- `4th_best.pt`
-- `segunda_etapa_best.pt`
-
-The live program uses `best.pt` by default. It prints the loaded model task
-and recognized class names when it starts. Additional model information is
-available in [`models/README.md`](models/README.md).
-
-## Dataset
-
-The [`dataset/`](dataset/) folder contains the documentation and access
-information for the dataset used by the project. The dataset is kept separate
-from the source code and model weights.
-
-The dataset documentation records the source, annotation format, class list,
-and training, validation, and testing splits.
-
-## Training and experiments
-
-The project notebooks are stored in
-[`src/training/`](src/training/):
-
-- `test_2_robot.ipynb`
-- `test_2_robot_again.ipynb`
-- `test_4.ipynb`
-- `test_4_improvement.ipynb`
-
-These notebooks contain the model-training experiments, evaluation work, and
-robot-testing iterations used during development.
-
-## Results and demonstration
-
-The [`results/`](results/) folder is used for prediction outputs, evaluation
-metrics, testing logs, and other computer-vision results.
-
-The [`demonstration/`](demonstration/) folder is used for robot photographs,
-system screenshots, demonstration videos, and evidence of the complete
-SEE -> DECIDE -> ACT process.
-
-## Project information
-
-- **Group members:**
-  - Albano, Luis Van Dirk
-  - Borac, John Joshua
-  - Carullo, John Wilbert
-  - Regalado, Roger Jr.
-  - Reyes, Reynaldo Jr.
-  - Sabio, Jacob Angel
-
-- **Project specialization:**
-
-Traffic Sign Recognition
-
-- **Robot/controller:** The computer-vision application outputs movement
-  commands for the connected robot/controller.
+- [ ] Dataset source, access method, classes, and train/validation/test counts
+      recorded
+- [ ] Final checkpoint and model task/classes recorded
+- [ ] Evaluation metrics and sample predictions added
+- [ ] Figure-8 line detection/tracking video added for Test 1
+- [ ] Traffic-sign specialization video added for Test 2
+- [ ] Robot photos and complete SEE -> DECIDE -> ACT evidence added

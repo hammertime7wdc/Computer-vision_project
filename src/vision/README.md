@@ -1,6 +1,10 @@
-# Vision modules
+# Vision pipeline
 
-Reusable computer-vision code belongs in this folder. The current final
-pipeline is kept in `src/testing/testing.py` because it combines camera
-input, inference, visualization, temporal smoothing, and command output in
-one demonstrable entry point.
+The current demonstrable pipeline is implemented in
+[`../testing/testing.py`](../testing/testing.py). It combines camera input,
+frame preparation, YOLO inference, confidence filtering, scan-window
+non-maximum suppression, visualization, temporal smoothing, and command
+selection.
+
+Future reusable vision helpers should be placed in this directory and kept
+independent from camera or robot I/O.
